@@ -1,26 +1,35 @@
-const express = require('express');
-const app = express();
-
-app.use(express.json());
-
-app.post('/ultimo-digito', (req, res) => {
-  const { numero } = req.body;
-
-  if (!numero || typeof numero !== 'string') {
-    return res.status(400).json({ erro: 'Número inválido ou ausente' });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ erro: 'Método não permitido. Use POST.' });
   }
 
-  const digitos = numero.trim();
-  const ultimo = digitos[digitos.length - 1];
+  let body = '';
 
-  if (!/\d/.test(ultimo)) {
-    return res.status(400).json({ erro: 'Último caractere não é um dígito' });
+  try {
+    // Captura o corpo da requisição manualmente
+    await new Promise((resolve, reject) => {
+      req.on('data', chunk => {
+        body += chunk;
+      });
+      req.on('end', resolve);
+      req.on('error', reject);
+    });
+
+    const data = JSON.parse(body);
+    const numero = data.numero;
+
+    if (!numero || typeof numero !== 'string') {
+      return res.status(400).json({ erro: 'Número inválido ou ausente' });
+    }
+
+    const ultimo = numero.trim().slice(-1);
+
+    if (!/\d/.test(ultimo)) {
+      return res.status(400).json({ erro: 'Último caractere não é um dígito' });
+    }
+
+    return res.status(200).json({ ultimo_digito: ultimo });
+  } catch (error) {
+    return res.status(500).json({ erro: 'Erro interno', detalhe: error.message });
   }
-
-  res.json({ ultimo_digito: ultimo });
-});
-
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`API rodando em http://localhost:${PORT}`);
-});
+}
